@@ -1,8 +1,8 @@
-import express, { Request, Response , Application } from 'express';
+import express, { Application } from 'express';
 import dotenv from 'dotenv';
 import { loginUser, userLogin } from './src/controller/auth.controller';
-import { getAllUsers, getUsedHistory } from './src/controller/user.controller';
-import { getAllNatchathiram } from './src/controller/main.controller';
+import { getAllUsers, getUsedHistory, getUserDetailsById } from './src/controller/user.controller';
+import { getAllNatchathiram, landingPage } from './src/controller/main.controller';
 
 
 //For env File 
@@ -16,14 +16,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 // Routing handle here
-app.get('/', (req: Request, res: Response) => {
-  res.send('Welcome to Express & TypeScript Server');
-});
+app.route('/').get(landingPage);
 app.route('/api/login').post(loginUser);
 app.route('/api/login2').post(userLogin);
 app.route('/api/getAllUsers').post(getAllUsers);
+app.route('/api/getUserDetailsById').post(getUserDetailsById);
 app.route('/api/getAllNatchathiram').post(getAllNatchathiram);
 app.route('/api/getUsedHistory').post(getUsedHistory);
+// app.route('/api/getRasi').post(getUsedHistory);
 
 
 app.listen(port, () => {

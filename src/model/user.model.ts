@@ -6,6 +6,10 @@ export function authenticateUser(email: string, password: string) {
     const query = `SELECT * FROM user WHERE user_name LIKE '${email}' AND user_password LIKE '${enc_pass}'`;
     return connectionHelper(query);
 }
+export function getUserDetailsByIdModel(userId: number) {
+    const query = `SELECT * FROM user WHERE user_id = '${userId}'`;
+    return connectionHelper(query);
+}
 
 export function getAllUsersModel() {
     const query = `SELECT * FROM user`;
