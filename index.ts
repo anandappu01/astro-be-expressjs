@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { loginUser, userLogin } from './src/controller/auth.controller';
 import { getAllUsers, getUsedHistory, getUserDetailsById } from './src/controller/user.controller';
 import { getAllNatchathiram, landingPage } from './src/controller/main.controller';
+import { getAstroChart } from './src/controller/prediction.controller';
 
 
 //For env File 
@@ -23,7 +24,7 @@ app.route('/api/getAllUsers').post(getAllUsers);
 app.route('/api/getUserDetailsById').post(getUserDetailsById);
 app.route('/api/getAllNatchathiram').post(getAllNatchathiram);
 app.route('/api/getUsedHistory').post(getUsedHistory);
-// app.route('/api/getRasi').post(getUsedHistory);
+app.route('/api/getChart').post(getAstroChart);
 
 
 app.listen(port, () => {

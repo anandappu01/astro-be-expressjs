@@ -1,4 +1,4 @@
-import { connectionHelper } from "../assets/helper";
+import { connectionHelper } from "../assets/connection_helper";
 var md5 = require('md5');
 
 export function authenticateUser(email: string, password: string) {
