@@ -1,3 +1,9 @@
+import { getRecordByDateModel } from "../../model/common.model";
+
+export function getRecordByDate(date: string) {
+    return getRecordByDateModel(date);
+}
+
 export function getNaligaiByHours(hours: string) {
     const hrsArray = hours.split(".");
     const hrs: any = hrsArray[0];
@@ -37,6 +43,7 @@ export function subtract_times(val1: string, val2: string) {
 }
 
 export function convert_seconds(naligai: string) {
+    // console.log(naligai);
     const type1 = naligai.includes(".");
     const type2 = naligai.includes(":");
 
