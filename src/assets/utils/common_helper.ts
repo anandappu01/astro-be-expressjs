@@ -1,6 +1,6 @@
 import { getRecordByDateModel } from "../../model/common.model";
 
-export function getRecordByDate(date: string) {
+export function getPanjangamInfoByDate(date: any) {
     return getRecordByDateModel(date);
 }
 

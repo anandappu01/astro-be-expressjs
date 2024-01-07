@@ -40,3 +40,42 @@ export interface mysqlRes {
     status: string,
     response: Dayinfo | any
 }
+
+export interface ChartInfo {
+    // Basic Info
+    sunrise?: string,
+    eng_date?: string,
+    tamil_date?: any,
+    tamil_month_id?: number,
+    tamil_month?: string,
+    that_date_details?: any,
+    birthNaligai?: number,
+    // Lagunam properties
+    lagnam_id?: number,
+    lagnam_name?: string,
+    lagnam_val?: number,
+    lagnam_total?: number,
+    lagunam_eruppu?: number,
+    lagunam_sell?: number,
+    lagunam_palan?: string,
+    amsalagunam_id?: number,
+    // Natcharhiram properties
+    natchathiram_id?: number,
+    natchathiram_name?: number,
+    natchathiram_patham?: number,
+    natchathiram_patham_sell?: number,
+    natchathiram_patham_eruppu?: number,
+    natchathiram_palan?: number,
+    athiantham?: number,
+    // Thisai properties
+    thisai_id?: number,
+    thisai_name?: number,
+    thisai_value?: number,
+    // Other properties
+    mirugam?: number,
+    patchi?: number,
+    maram?: number,
+    ganam?: number,
+    rajji?: number,
+    nadi?: number
+}

@@ -9,3 +9,8 @@ export function getRecordByDateModel(date: string) {
     // console.log(query);
     return dayInfoConnectionHelper(query);
 }
+export function getTamilMonthModel(tamilmonth_id: number) {
+    const query = `SELECT * FROM tamil_month WHERE tamilmonth_id = '${tamilmonth_id}'`;
+    // console.log(query);
+    return dayInfoConnectionHelper(query);
+}

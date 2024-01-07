@@ -16,13 +16,14 @@ export function connectionHelper(query: string) {
 }
 
 export function dayInfoConnectionHelper(query: string) {
-    return new Promise<mysqlRes>((resolve) => {
+    return new Promise<[any]>((resolve, reject) => {
         connection.query(query, (err: any, result: Dayinfo) => {
             if (!err) {
-                resolve({ status: 'success', response: JSON.parse(JSON.stringify(result)) });
+                // console.log(result);
+                resolve(JSON.parse(JSON.stringify(result)));
             } else {
                 console.log(err);
-                resolve({ status: 'error', response: err });
+                reject(err);
             }
         });
     });
