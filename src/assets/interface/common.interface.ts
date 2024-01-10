@@ -33,7 +33,7 @@ export interface Dayinfo {
     sun_rise_id: number,
     sun_rise_month: number,
     sun_rise_date: number,
-    sun_rise_value: number,
+    sun_rise_value: string,
     eng_date: string
 }
 export interface mysqlRes {
@@ -42,14 +42,24 @@ export interface mysqlRes {
 }
 
 export interface ChartInfo {
+    // User Input
+    inputDate?: string,
+    birth_date?: string,
+    birth_time?: string,
+    time_type?: string,
+    gender?: string,
     // Basic Info
     sunrise?: string,
     eng_date?: string,
     tamil_date?: any,
     tamil_month_id?: number,
     tamil_month?: string,
-    that_date_details?: any,
+    basehrs?: string,
     birthNaligai?: number,
+    // Yesterday, Today, Tomorrow Panjangam info
+    before_date_details?: any,
+    that_date_details?: any,
+    next_date_details?: any,
     // Lagunam properties
     lagnam_id?: number,
     lagnam_name?: string,
