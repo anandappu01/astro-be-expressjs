@@ -9,8 +9,8 @@ export async function getAllNatchathiram(req: Request, res: Response) {
     console.log("getAllNatchathiram attempt ...");
     const user: any = await getAllNatchathiramModel();
     // console.log(user);
-    if (user.status === 'success') {
-        res.status(200).json(user.response);
+    if (user.length) {
+        res.status(200).json(user);
     } else {
         res.sendStatus(403);
     }

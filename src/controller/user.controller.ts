@@ -5,8 +5,8 @@ export async function getAllUsers(req: Request, res: Response) {
     console.log("getAllUsers attempt ...");
     const user: any = await getAllUsersModel();
     // console.log(user);
-    if (user.status === 'success') {
-        res.status(200).json(user.response);
+    if (user.length) {
+        res.status(200).json(user);
     } else {
         res.sendStatus(403);
     }
@@ -17,8 +17,8 @@ export async function getUserDetailsById(req: Request, res: Response) {
     const { userId } = req.body;
     const user: any = await getUserDetailsByIdModel(userId);
     // console.log(user);
-    if (user.status === 'success') {
-        res.status(200).json(user.response);
+    if (user.length) {
+        res.status(200).json(user);
     } else {
         res.sendStatus(403);
     }
@@ -29,8 +29,8 @@ export async function getUsedHistory(req: Request, res: Response) {
     const { userId } = req.body;
     const user: any = await getUsedHistoryModel(userId);
     // console.log(userId);
-    if (user.status === 'success') {
-        res.status(200).json(user.response);
+    if (user.length) {
+        res.status(200).json(user);
     } else {
         res.sendStatus(403);
     }

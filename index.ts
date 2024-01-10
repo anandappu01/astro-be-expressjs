@@ -18,8 +18,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 // Routing handle here
 app.route('/').get(landingPage);
-app.route('/api/login').post(loginUser);
-app.route('/api/login2').post(userLogin);
+// app.route('/api/login').post(loginUser);
+app.route('/api/login').post(userLogin);
 app.route('/api/getAllUsers').post(getAllUsers);
 app.route('/api/getUserDetailsById').post(getUserDetailsById);
 app.route('/api/getAllNatchathiram').post(getAllNatchathiram);

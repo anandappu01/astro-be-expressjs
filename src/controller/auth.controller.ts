@@ -12,14 +12,13 @@ export function loginUser(req: Request, res: Response) {
         res.sendStatus(403);
     }
 }
-
 export async function userLogin(req: Request, res: Response) {
     console.log("User login attempt ...");
     const { email, password } = req.body;
     const user: any = await authenticateUser(email, password);
     // console.log(user);
-    if (user.status === 'success' && user.response.length) {
-        res.status(200).json(user.response);
+    if (user.length) {
+        res.status(200).json(user);
     } else {
         res.sendStatus(403);
     }
