@@ -14,3 +14,8 @@ export function getTamilMonthModel(tamilmonth_id: number) {
     // console.log(query);
     return dayInfoConnectionHelper(query);
 }
+export function getAllLagunamModel() {
+    const query = `SELECT * FROM lagunam`;
+    // console.log(query);
+    return connectionHelper(query);
+}

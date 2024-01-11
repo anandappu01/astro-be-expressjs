@@ -55,7 +55,9 @@ export interface ChartInfo {
     tamil_month_id?: number,
     tamil_month?: string,
     basehrs?: string,
-    birthNaligai?: number,
+    birthNaligai?: string,
+    Kalam_no?: number,
+    Kalam_name?: string,
     // Yesterday, Today, Tomorrow Panjangam info
     before_date_details?: any,
     that_date_details?: any,

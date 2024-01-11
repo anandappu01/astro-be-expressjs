@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { convert_seconds, getPanjangamInfoByDate } from '../assets/utils/common_helper';
+import { getNaligaiByHours, getPanjangamInfoByDate } from '../assets/utils/common_helper';
 import { ChartInfo, Dayinfo } from '../assets/interface/common.interface';
 import { formatDate_DMY_WITH_HYPHENS, nextDateByCount, previousDateByCount } from '../assets/utils/date_helper';
-import { getTamilMonthModel } from '../model/common.model';
-import { getTimeDifference_HHMM } from '../assets/utils/time_helper';
+import { getAllLagunamModel, getTamilMonthModel } from '../model/common.model';
+import { add_times, convert_seconds, getTimeDifference_HHMM, subtract_times } from '../assets/utils/time_helper';
 
 const result: ChartInfo = {};
 
@@ -36,7 +36,7 @@ export async function getAstroChart(req: Request, res: Response) {
             const time_birth_seconds = convert_seconds(birth_time);
             const middle_seconds = convert_seconds('11.59');
             // console.log(sunrise_seconds);
-            //  NOTE: Befor night after 12.00 PM also satisfyed ($time_birth_seconds > $sunrise_seconds) ITS WRONG
+            //  NOTE: Befor night after 12.00 PM also satisfyed (time_birth_seconds > sunrise_seconds) ITS WRONG
             //  SO WE NEED TO CREATE Another 1 condition followes.
             if (time_birth_seconds > middle_seconds) {    // EG(12.40 AM > 11.59 PM)
                 // Previous day calculation.
@@ -90,7 +90,13 @@ export async function getAstroChart(req: Request, res: Response) {
     result.tamil_month = month_details[0].month_name;
     // console.log(month_details);
     result.basehrs = getBasehrs();
-    // getNaligai();
+    result.birthNaligai = getNaligaiByHours(result.basehrs);
+    result.Kalam_no = getKaalam(result.basehrs);
+    // getLagunam(get_naligai, that_date_details[0]['lagunam_id'], that_date_details[0]['lagunam_val']);
+    // Calculate Lagunam Details
+    const lagunamList = await getAllLagunamModel();
+    // console.log(lagunamList);
+    getLagunam(lagunamList);
     console.log(result);
 }
 export function getBasehrs() {
@@ -104,4 +110,153 @@ export function getBasehrs() {
     const diff = getTimeDifference_HHMM(dateTime1, dateTime2);
     // console.log(diff);
     return diff;
+}
+export function getKaalam(basehrs: string) { // Male or Female
+    const sec_for_half_hour = 1800;
+    const basehrs_sec = convert_seconds(basehrs);
+    return Math.ceil(basehrs_sec / sec_for_half_hour);
+}
+export function getLagunam(lagunamList: []) {
+    // console.log(result.birthNaligai);
+    // console.log(result.that_date_details['lagunam_id']);
+    // console.log(result.that_date_details['lagunam_val']);
+    const birthNaligai: any = result.birthNaligai;
+    const thatDayLagunamId = result.that_date_details['lagunam_id'];
+    const thatDayLagunamVal = result.that_date_details['lagunam_val'];
+
+    let total = '';
+    if (birthNaligai === thatDayLagunamVal) {  // 4.50 = 4.50
+        result.lagnam_name = lagunamList[thatDayLagunamId - 1]['lagunam'];
+        result.lagnam_val = lagunamList[thatDayLagunamId - 1]['lagunam_val'];
+        result.lagnam_id = lagunamList[thatDayLagunamId - 1]['lagunam_id'];
+        result.lagunam_palan = lagunamList[thatDayLagunamId - 1]['laguna_palan'];
+        result.lagunam_eruppu = 0.00;
+        result.lagunam_sell = result.lagunam_eruppu;
+        // $amsam_details = get_amsalagunam($lagnamid_temp, $lagunam_val, $lagunam_sell);
+        total = '';
+        result.lagunam_eruppu = result.lagunam_eruppu;
+    } else if (birthNaligai < thatDayLagunamVal) {  // 1.17 < 4.50
+        result.lagnam_name = lagunamList[thatDayLagunamId - 1]['lagunam'];
+        result.lagnam_val = lagunamList[thatDayLagunamId - 1]['lagunam_val'];
+        result.lagnam_id = lagunamList[thatDayLagunamId - 1]['lagunam_id'];
+        result.lagunam_palan = lagunamList[thatDayLagunamId - 1]['laguna_palan'];
+        result.lagunam_eruppu = Number(subtract_times(thatDayLagunamVal, birthNaligai));
+        result.lagunam_sell = Number(subtract_times(result.lagnam_val, result.lagunam_eruppu.toString()));
+        const amsam_details = get_amsalagunam(result.lagnam_id, result.lagnam_val, result.lagunam_sell);
+        total = '';
+        result.lagunam_eruppu = result.lagunam_eruppu;
+    }
+    // console.log(result);
+    // return result;
+}
+export function get_amsalagunam(lagnamid: number, lagnam_val: number, lagunam_sell: number) {
+    // // get laguna sell naligai start
+    // const b = convert_naligai_to_vinadi(lagunam_sell);
+    // // get laguna sell naligai End
+
+    // let oneNinth = 0;
+    // let muthalAdhi = 1;
+    // if (lagnamid === 1) {         // Messam
+    //     oneNinth = 30.3333;
+    //     muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
+    //     // athi = 'Mesam';
+    // }
+    // if (lagnamid === 2) {         // Risha
+    //     oneNinth = 34.1111;
+    //     muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
+    //     // athi = 'Magaram';
+    // }
+    // if (lagnamid === 3) {         // Mithu
+    //     oneNinth = 36.4444;
+    //     muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
+    //     // athi = 'Thulam';
+    // }
+    // if (lagnamid === 4) {         // Kadagam
+    //     oneNinth = 35.5555;
+    //     muthalAdhi = 4;
+    //     // athi = 'Kadagam';
+    // }
+    // if (lagnamid === 5) {         // Simmam
+    //     oneNinth = 33.6666;
+    //     muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
+    //     // athi = 'Mesam';
+    // }
+    // if (lagnamid === 6) {         // Kanni
+    //     oneNinth = 33.2222;
+    //     muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
+    //     // athi = 'Magaram';
+    // }
+    // if (lagnamid === 7) {         // Thulam
+    //     oneNinth = 34.6666;
+    //     muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
+    //     // athi = 'Thulam';
+    // }
+    // if (lagnamid === 8) {         // Viruchi
+    //     oneNinth = 36.3333;
+    //     muthalAdhi = 4;
+    //     // athi = 'Kadagam';
+    // }
+    // if (lagnamid === 9) {         // Dhanusu
+    //     oneNinth = 35.5555;
+    //     muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
+    //     // athi = 'Mesam';
+    // }
+    // if (lagnamid === 10) {         // Magaram
+    //     oneNinth = 32;
+    //     muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
+    //     // athi = 'Magaram';
+    // }
+    // if (lagnamid === 11) {         // Kumbam
+    //     oneNinth = 28.7777;
+    //     muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
+    //     // athi = 'Thulam';
+    // }
+    // if (lagnamid === 12) {         // Menam
+    //     oneNinth = 28.2222;
+    //     muthalAdhi = 4;
+    //     // athi = 'Kadagam';
+    // }
+
+    // const c = (b / oneNinth)
+    // const d = c.toString().split('.');
+    // const f = mb_substr(d[1], 0, 1);
+    // let g = '0';
+    // if (f == 0) {
+    //     g = d[0];
+    // } else {
+    //     g = d[0] + 1;
+    // }
+    // //        echo 'g =>'.g.'<br>';
+    // result = all_lagunam('*');
+    // l = array();
+    // foreach(result as key => row) {
+    //     lagunam_id = row['lagunam_id'];
+    //     l[lagunam_id] = row;
+    // }
+
+    // limit = (muthalAdhi + g);
+    // /* For Default Amsa Lagunam ***START*** ERROR FIXED ON 21-Dec-2017 For Below Senario 
+    //  * Assumed Lagunam is Mithunam -> 5.28  -> 36.444
+    //  * Mithunam Eruppu -> 5.26
+    //  * Mithunam Sel -> 0.2
+    //  * So (2/36.444) => 0.054 so Equals to ZERO
+    //  * So Condition Fails on below for Loop.
+    //  * So Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi
+    //  */
+    // xx = limit;
+    // if (xx >= 13) {
+    //     xx = (xx - 12);
+    // }
+    // //        echo xx; die;
+    // amsam = l[xx]['lagunam'];
+    // /* For Default Amsa Lagunam ***END*** ON 21-Dec-2017 */
+    // for (i = muthalAdhi; i < limit; i++) {
+    //     xx = i;
+    //     if (xx >= 13) {
+    //         xx = (xx - 12);
+    //     }
+    //     amsam = l[xx]['lagunam'];
+    // }
+    // amsam_details = array('amsam_id' => xx, 'amsam' => amsam);
+    // return amsam_details;
 }
