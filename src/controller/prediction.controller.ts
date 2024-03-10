@@ -1,9 +1,17 @@
 import { Request, Response } from 'express';
 import { getNaligaiByHours, getPanjangamInfoByDate } from '../assets/utils/common_helper';
-import { ChartInfo, Dayinfo } from '../assets/interface/common.interface';
+import { ChartInfo, ChartRes, Dayinfo, lagunam } from '../assets/interface/common.interface';
 import { formatDate_DMY_WITH_HYPHENS, nextDateByCount, previousDateByCount } from '../assets/utils/date_helper';
-import { getAllLagunamModel, getTamilMonthModel } from '../model/common.model';
+import { getTamilMonthModel, rasi_amsam_box_detail } from '../model/common.model';
 import { add_times, convert_seconds, getTimeDifference_HHMM, subtract_times } from '../assets/utils/time_helper';
+import { getRasiAmsamPositionId } from '../assets/utils/rasi_amsam_map_helper';
+import { naligai2vinadi } from '../assets/utils/naligai2vinadi_helper';
+import { getLagunam } from '../assets/utils/lagunam_helper';
+import { getRasi } from '../assets/utils/rasi_helper';
+import { getMonth } from '../assets/utils/month_helper';
+import { getYear } from '../assets/utils/year_helper';
+import { getStar } from '../assets/utils/star_helper';
+import { getLagunamPalan } from '../assets/utils/lagunapalan_helper';
 
 const result: ChartInfo = {};
 
@@ -13,14 +21,9 @@ export async function getAstroChart(req: Request, res: Response) {
     const birth_time = req.body['time'];
     const { time_type, gender } = req.body;
     console.log(req.body);
-    result.inputDate = inputDate;
-    result.birth_date = formatDate_DMY_WITH_HYPHENS(new Date(inputDate));
-    result.birth_time = birth_time;
-    result.time_type = time_type;
-    result.gender = gender;
     const inputDateinfoArray = await getPanjangamInfoByDate(inputDate);
-    let before_date_details;
-    let that_date_details;
+    let before_date_details: any;
+    let that_date_details: any;
     let next_date_details;
     if (inputDateinfoArray.length) {
         const inputDateRes: Dayinfo = inputDateinfoArray[0];
@@ -28,11 +31,8 @@ export async function getAstroChart(req: Request, res: Response) {
         let before_date;
         let that_date;
         let next_date;
-        const sunrise = '' + inputDateRes.sunrise;
-        result.sunrise = sunrise;
-        result.eng_date = inputDate;
         if (time_type == 'AM') {
-            const sunrise_seconds = convert_seconds(sunrise);
+            const sunrise_seconds = convert_seconds(inputDateRes.sunrise);
             const time_birth_seconds = convert_seconds(birth_time);
             const middle_seconds = convert_seconds('11.59');
             // console.log(sunrise_seconds);
@@ -63,11 +63,14 @@ export async function getAstroChart(req: Request, res: Response) {
             that_date = inputDate;
             next_date = nextDateByCount(inputDate, 1);
         }
-        before_date_details = await getPanjangamInfoByDate(before_date);
-        that_date_details = await getPanjangamInfoByDate(that_date);
-        next_date_details = await getPanjangamInfoByDate(next_date);
+        before_date_details = await getPanjangamInfoByDate(before_date, 'lessInfo');
+        that_date_details = await getPanjangamInfoByDate(that_date, 'allInfo');
+        next_date_details = await getPanjangamInfoByDate(next_date, 'lessInfo');
+        const thatDayInfo = splitInfoByTypes(that_date_details[0], req.body);
+        // console.log(thatDayInfo);
+        result.thatDayBasicInfo = thatDayInfo.basicInfo;
         result.before_date_details = before_date_details[0];
-        result.that_date_details = that_date_details[0];
+        result.that_date_details = thatDayInfo.deepInfo;
         result.next_date_details = next_date_details[0];
         if (!before_date_details.length) {
             res.status(200).json('Record Not Found in DB for that year You Entered! <br> Before Date Not Available <br> <b>Error Id 02 </b> ');
@@ -81,32 +84,27 @@ export async function getAstroChart(req: Request, res: Response) {
         res.status(200).json('Record Not Found in DB for that year You Entered! <br> <b>Error Id 01 </b> ');
         return false;
     }
-    // console.log(before_date_details);
-    // console.log(that_date_details);
-    // console.log(next_date_details);
-    result.tamil_date = that_date_details[0]['tamil_date'];
-    const month_details = await getTamilMonthModel(that_date_details[0]['month_id']);
-    result.tamil_month_id = month_details[0].tamilmonth_id;
-    result.tamil_month = month_details[0].month_name;
-    // console.log(month_details);
-    result.basehrs = getBasehrs();
-    result.birthNaligai = getNaligaiByHours(result.basehrs);
-    result.Kalam_no = getKaalam(result.basehrs);
-    // getLagunam(get_naligai, that_date_details[0]['lagunam_id'], that_date_details[0]['lagunam_val']);
-    // Calculate Lagunam Details
-    const lagunamList = await getAllLagunamModel();
+
+    result.thatDayBasicInfo.basehrs = getBasehrs();
+    result.thatDayBasicInfo.birthNaligai = getNaligaiByHours(result.thatDayBasicInfo.basehrs);
+    result.thatDayBasicInfo.Kalam_no = getKaalam(result.thatDayBasicInfo.basehrs);
+
     // console.log(lagunamList);
-    getLagunam(lagunamList);
+    const rasi_amsam = await getRasiAmsam(before_date_details, that_date_details, result.thatDayBasicInfo.birthNaligai);
+    result.rasiAmsamChartInfo = rasi_amsam;
+    // Calculate Lagunam Details
+    const lagunamList = getLagunamDetails();
     console.log(result);
 }
 export function getBasehrs() {
-    const sunRise = '' + result.that_date_details.sun_rise_value;
-    const birthTime = '' + result.birth_time;
+    const baseInfo = result.thatDayBasicInfo;
+    const sunRise = baseInfo.sunrise.toString();
+    const birthTime = baseInfo.birth_time;
     const sunriceArray: any = sunRise.split('.');
     const birthTimeArray: any = birthTime.split('.');
     const dateTime1 = `${result.that_date_details?.eng_date} ${sunriceArray[0].padStart(2, '0')}:${sunriceArray[1]} AM`;
     // Here both result.inputDate and birthdate are same but formate is different.
-    const dateTime2 = `${result.inputDate} ${birthTimeArray[0].padStart(2, '0')}:${birthTimeArray[1]} ${result.time_type}`;
+    const dateTime2 = `${baseInfo.inputDate} ${birthTimeArray[0].padStart(2, '0')}:${birthTimeArray[1]} ${baseInfo.time_type}`;
     const diff = getTimeDifference_HHMM(dateTime1, dateTime2);
     // console.log(diff);
     return diff;
@@ -116,109 +114,176 @@ export function getKaalam(basehrs: string) { // Male or Female
     const basehrs_sec = convert_seconds(basehrs);
     return Math.ceil(basehrs_sec / sec_for_half_hour);
 }
-export function getLagunam(lagunamList: []) {
-    // console.log(result.birthNaligai);
-    // console.log(result.that_date_details['lagunam_id']);
-    // console.log(result.that_date_details['lagunam_val']);
-    const birthNaligai: any = result.birthNaligai;
-    const thatDayLagunamId = result.that_date_details['lagunam_id'];
-    const thatDayLagunamVal = result.that_date_details['lagunam_val'];
-
+export function getLagunamDetails() {
+    const birthNaligai: any = result.thatDayBasicInfo.birthNaligai;
+    let thatDayLagunamId = result.that_date_details.lagunam_id;
+    const thatDayLagunamVal = result.that_date_details.lagunam_val;
+    const lagunamInfo: any = getLagunam();
+    const thatDayLagunamInfo = lagunamInfo.filter((x: any) => x.id === thatDayLagunamId)[0];
+    // console.log(thatDayLagunamInfo);
     let total = '';
-    if (birthNaligai === thatDayLagunamVal) {  // 4.50 = 4.50
-        result.lagnam_name = lagunamList[thatDayLagunamId - 1]['lagunam'];
-        result.lagnam_val = lagunamList[thatDayLagunamId - 1]['lagunam_val'];
-        result.lagnam_id = lagunamList[thatDayLagunamId - 1]['lagunam_id'];
-        result.lagunam_palan = lagunamList[thatDayLagunamId - 1]['laguna_palan'];
-        result.lagunam_eruppu = 0.00;
-        result.lagunam_sell = result.lagunam_eruppu;
-        // $amsam_details = get_amsalagunam($lagnamid_temp, $lagunam_val, $lagunam_sell);
-        total = '';
-        result.lagunam_eruppu = result.lagunam_eruppu;
-    } else if (birthNaligai < thatDayLagunamVal) {  // 1.17 < 4.50
-        result.lagnam_name = lagunamList[thatDayLagunamId - 1]['lagunam'];
-        result.lagnam_val = lagunamList[thatDayLagunamId - 1]['lagunam_val'];
-        result.lagnam_id = lagunamList[thatDayLagunamId - 1]['lagunam_id'];
-        result.lagunam_palan = lagunamList[thatDayLagunamId - 1]['laguna_palan'];
-        result.lagunam_eruppu = Number(subtract_times(thatDayLagunamVal, birthNaligai));
-        result.lagunam_sell = Number(subtract_times(result.lagnam_val, result.lagunam_eruppu.toString()));
-        const amsam_details = get_amsalagunam(result.lagnam_id, result.lagnam_val, result.lagunam_sell);
-        total = '';
-        result.lagunam_eruppu = result.lagunam_eruppu;
+    const chartLagunam = {
+        graham_name: 'Lagunam',
+        natchathiram_name: '',
+        lagunam_palan: '',
+        natchathiram_id: 0,
+        natchathiram_patham: 0,
+        rasi_position: 0,
+        rasi_position_name: '',
+        amsam_position: 0,
+        amsam_position_name: ''
     }
-    // console.log(result);
-    // return result;
+    if (birthNaligai === thatDayLagunamVal) {  // 4.50 = 4.50
+        // result.lagnam_name = thatDayLagunamInfo.name;
+        // result.lagnam_val = thatDayLagunamInfo.value;
+        // result.lagnam_id = thatDayLagunamInfo.id;
+        // result.lagunam_palan = thatDayLagunamInfo.palan;
+        // result.lagunam_eruppu = 0.00;
+        // result.lagunam_sell = result.lagunam_eruppu;
+        // // $amsam_details = get_amsalagunam($lagnamid_temp, $lagunam_val, $lagunam_sell);
+        // total = '';
+        // result.lagunam_eruppu = result.lagunam_eruppu;
+        chartLagunam.rasi_position = thatDayLagunamInfo.id;
+        chartLagunam.rasi_position_name = thatDayLagunamInfo.name;
+    } else if (birthNaligai < thatDayLagunamVal) {  // 1.17 < 4.50
+        // result.lagnam_name = thatDayLagunamInfo.name;
+        // result.lagnam_val = thatDayLagunamInfo.value;
+        // result.lagnam_id = thatDayLagunamInfo.id;
+        // result.lagunam_palan = thatDayLagunamInfo.palan;
+        // result.lagunam_eruppu = subtract_times(thatDayLagunamVal, birthNaligai);
+        // result.lagunam_sell = subtract_times('' + result.lagnam_val, result.lagunam_eruppu);
+        // const amsam_details = get_amsalagunam(result.lagnam_id, result.lagnam_val, result.lagunam_sell);
+        // total = '';
+        // result.lagunam_eruppu = result.lagunam_eruppu;
+        chartLagunam.rasi_position = thatDayLagunamInfo.id;
+        chartLagunam.rasi_position_name = thatDayLagunamInfo.name;
+        const amsam_details = get_amsalagunam(chartLagunam.rasi_position, thatDayLagunamVal, parseFloat(''));
+        chartLagunam.amsam_position = amsam_details.amsam_position;
+        chartLagunam.amsam_position_name = amsam_details.amsam_position_name;
+        const rasi_amsam_Info = getPathaSaramForLagunam(chartLagunam.rasi_position, chartLagunam.amsam_position)
+        chartLagunam.natchathiram_id = rasi_amsam_Info.natchathiram_id;
+        chartLagunam.natchathiram_patham = rasi_amsam_Info.patham;
+        const startInfo: any = getStar(chartLagunam.natchathiram_id);
+        chartLagunam.natchathiram_name = startInfo.name;
+
+    } else if (birthNaligai > thatDayLagunamVal) {  // 20.00 > 4.05
+        let lagnamid_temp = 0;
+        let lagnamName = '';
+        let lagnamVal = 0;
+        let lagnamPalan = '';
+        let lagnam_eruppu = '';
+
+        for (let i = thatDayLagunamVal; i <= birthNaligai; thatDayLagunamId++) {
+            if (thatDayLagunamId >= 13) {
+                thatDayLagunamId = (thatDayLagunamId - 12);
+            }
+            const thatDayLagunamInfo = lagunamInfo.filter((x: any) => x.id === thatDayLagunamId)[0];
+            total = add_times(thatDayLagunamVal, thatDayLagunamInfo.value);
+            lagnamName = thatDayLagunamInfo.name;
+            lagnamid_temp = thatDayLagunamInfo.id;
+            lagnamVal = thatDayLagunamInfo.value;
+            lagnamPalan = thatDayLagunamInfo.palan;
+            lagnam_eruppu = total;
+            i = lagnam_eruppu;
+        }
+        const lagunam_eruppu = subtract_times(birthNaligai, total);
+        const lagunam_sell = subtract_times(lagnamVal, lagunam_eruppu);
+        const amsam_details = get_amsalagunam(lagnamid_temp, lagnamVal, parseFloat(lagunam_sell));
+        chartLagunam.rasi_position = lagnamid_temp;
+        chartLagunam.rasi_position_name = lagnamName;
+        const lagunamPalan_Info: any = getLagunamPalan(chartLagunam.rasi_position);
+        chartLagunam.lagunam_palan = lagunamPalan_Info.desc;
+        chartLagunam.amsam_position = amsam_details.amsam_position;
+        chartLagunam.amsam_position_name = amsam_details.amsam_position_name;
+        const rasi_amsam_Info = getPathaSaramForLagunam(chartLagunam.rasi_position, chartLagunam.amsam_position)
+        chartLagunam.natchathiram_id = rasi_amsam_Info.natchathiram_id;
+        chartLagunam.natchathiram_patham = rasi_amsam_Info.patham;
+        const startInfo: any = getStar(chartLagunam.natchathiram_id);
+        chartLagunam.natchathiram_name = startInfo.name;
+    }
+    result.rasiAmsamChartInfo.push(chartLagunam);
 }
 export function get_amsalagunam(lagnamid: number, lagnam_val: number, lagunam_sell: number) {
-    // // get laguna sell naligai start
-    // const b = convert_naligai_to_vinadi(lagunam_sell);
-    // // get laguna sell naligai End
+    // console.log(lagnamid);
+    // console.log('--------------');
+    // console.log(lagnam_val);
+    // console.log('--------------');
+    // console.log(lagunam_sell);
+    // console.log('--------------');
+    // get laguna sell naligai start
+    const b = naligai2vinadi(lagunam_sell);
+    // get laguna sell naligai End
 
-    // let oneNinth = 0;
-    // let muthalAdhi = 1;
-    // if (lagnamid === 1) {         // Messam
-    //     oneNinth = 30.3333;
-    //     muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
-    //     // athi = 'Mesam';
-    // }
-    // if (lagnamid === 2) {         // Risha
-    //     oneNinth = 34.1111;
-    //     muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
-    //     // athi = 'Magaram';
-    // }
-    // if (lagnamid === 3) {         // Mithu
-    //     oneNinth = 36.4444;
-    //     muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
-    //     // athi = 'Thulam';
-    // }
-    // if (lagnamid === 4) {         // Kadagam
-    //     oneNinth = 35.5555;
-    //     muthalAdhi = 4;
-    //     // athi = 'Kadagam';
-    // }
-    // if (lagnamid === 5) {         // Simmam
-    //     oneNinth = 33.6666;
-    //     muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
-    //     // athi = 'Mesam';
-    // }
-    // if (lagnamid === 6) {         // Kanni
-    //     oneNinth = 33.2222;
-    //     muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
-    //     // athi = 'Magaram';
-    // }
-    // if (lagnamid === 7) {         // Thulam
-    //     oneNinth = 34.6666;
-    //     muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
-    //     // athi = 'Thulam';
-    // }
-    // if (lagnamid === 8) {         // Viruchi
-    //     oneNinth = 36.3333;
-    //     muthalAdhi = 4;
-    //     // athi = 'Kadagam';
-    // }
-    // if (lagnamid === 9) {         // Dhanusu
-    //     oneNinth = 35.5555;
-    //     muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
-    //     // athi = 'Mesam';
-    // }
-    // if (lagnamid === 10) {         // Magaram
-    //     oneNinth = 32;
-    //     muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
-    //     // athi = 'Magaram';
-    // }
-    // if (lagnamid === 11) {         // Kumbam
-    //     oneNinth = 28.7777;
-    //     muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
-    //     // athi = 'Thulam';
-    // }
-    // if (lagnamid === 12) {         // Menam
-    //     oneNinth = 28.2222;
-    //     muthalAdhi = 4;
-    //     // athi = 'Kadagam';
-    // }
+    let oneNinth = 0;
+    let muthalAdhi = 1;
+    if (lagnamid === 1) {         // Messam
+        oneNinth = 30.3333;
+        muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
+        // athi = 'Mesam';
+    }
+    if (lagnamid === 2) {         // Risha
+        oneNinth = 34.1111;
+        muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
+        // athi = 'Magaram';
+    }
+    if (lagnamid === 3) {         // Mithu
+        oneNinth = 36.4444;
+        muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
+        // athi = 'Thulam';
+    }
+    if (lagnamid === 4) {         // Kadagam
+        oneNinth = 35.5555;
+        muthalAdhi = 4;
+        // athi = 'Kadagam';
+    }
+    if (lagnamid === 5) {         // Simmam
+        oneNinth = 33.6666;
+        muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
+        // athi = 'Mesam';
+    }
+    if (lagnamid === 6) {         // Kanni
+        oneNinth = 33.2222;
+        muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
+        // athi = 'Magaram';
+    }
+    if (lagnamid === 7) {         // Thulam
+        oneNinth = 34.6666;
+        muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
+        // athi = 'Thulam';
+    }
+    if (lagnamid === 8) {         // Viruchi
+        oneNinth = 36.3333;
+        muthalAdhi = 4;
+        // athi = 'Kadagam';
+    }
+    if (lagnamid === 9) {         // Dhanusu
+        oneNinth = 35.5555;
+        muthalAdhi = 1;    /* Messa,Simma,Dhanusu --> Messam Muthal Adhi */
+        // athi = 'Mesam';
+    }
+    if (lagnamid === 10) {         // Magaram
+        oneNinth = 32;
+        muthalAdhi = 10;   /* Rishaba,Kanni,Maharam --> Maharam Muthal Adhi */
+        // athi = 'Magaram';
+    }
+    if (lagnamid === 11) {         // Kumbam
+        oneNinth = 28.7777;
+        muthalAdhi = 7;    /* Mithuna,Thulam,Kumbam --> Thulam Muthal Adhi */
+        // athi = 'Thulam';
+    }
+    if (lagnamid === 12) {         // Menam
+        oneNinth = 28.2222;
+        muthalAdhi = 4;
+        // athi = 'Kadagam';
+    }
 
-    // const c = (b / oneNinth)
-    // const d = c.toString().split('.');
+    const c = (b / oneNinth);
+    const d = c.toString().split('.');
+
+    // console.log(b);
+    // console.log(c);
+    // console.log(d);
+
     // const f = mb_substr(d[1], 0, 1);
     // let g = '0';
     // if (f == 0) {
@@ -259,4 +324,98 @@ export function get_amsalagunam(lagnamid: number, lagnam_val: number, lagunam_se
     // }
     // amsam_details = array('amsam_id' => xx, 'amsam' => amsam);
     // return amsam_details;
+    const amsam = 9;
+    const lagunamInfo: any = getLagunam();
+    const thatDayLagunamInfo = lagunamInfo.filter((x: any) => x.id === amsam)[0];
+    return { amsam_position: 9, amsam_position_name: thatDayLagunamInfo.name };
+}
+export async function getRasiAmsam(before_date_details: any, that_date_details: any, birthNaligai: string) {
+    const grahams = [
+        { name: 'suriyan', value: 1 },
+        { name: 'Sevvai', value: 3 },
+        { name: 'Puthan', value: 7 },
+        { name: 'Guru', value: 5 },
+        { name: 'Sukran', value: 9 },
+        { name: 'Sani', value: 6 },
+        { name: 'Raagu', value: 4 },
+        { name: 'Kethu', value: 8 },
+    ];
+    const rasi_amsam: any = [];
+    for await (const graham of grahams) {
+        const grahamDetails = { graham_id: graham.value, eng_date: that_date_details.eng_date };
+        const res = await get_rasi_amsam_box(before_date_details, that_date_details, birthNaligai, grahamDetails);
+        rasi_amsam.push(res[0]);
+    }
+    return rasi_amsam;
+}
+export async function get_rasi_amsam_box(before_date_details: any, that_date_details: any, naligai: string, grahamDetails: any) {
+    const where = { graham_id: grahamDetails.graham_id, eng_date: that_date_details[0].eng_date };
+    let response = await rasi_amsam_box_detail(naligai, where);
+    if ((response[0]['natchathiram_val'] != '0.00') && (response[0]['natchathiram_val'] != '00.00')) {
+        const naligai_vinadi = naligai2vinadi(naligai);
+        const natchathiram_val_vinadi = naligai2vinadi(response[0]['natchathiram_val']);
+        if (naligai_vinadi < natchathiram_val_vinadi) {
+            // Here You need to use previous date info, because this changes will hapen after birth naligai
+            const where = { graham_id: grahamDetails.graham_id, eng_date: before_date_details[0].eng_date };
+            response = await rasi_amsam_box_detail(naligai, where);
+        }
+    }
+    // Get Rasi & Amsam id info's
+    const rasi_amsam_array: any = getRasiAmsamPositionId(response[0].natchathiram_id, response[0].natchathiram_patham);
+    response[0].rasi_position = rasi_amsam_array.rasi_id;
+    response[0].rasi_position_name = getRasi(rasi_amsam_array.rasi_id);
+    response[0].amsam_position = rasi_amsam_array.amsam_id;
+    response[0].amsam_position_name = getRasi(rasi_amsam_array.amsam_id);
+    return response;
+}
+export function splitInfoByTypes(data: Dayinfo, userInput: any) {
+    const basicInfo: Dayinfo = {} as any;
+    const deepInfo: Dayinfo = {} as any;
+    // Create Basic Details.
+    basicInfo.inputDate = formatDate_DMY_WITH_HYPHENS(new Date(userInput.date));
+    basicInfo.birth_date = formatDate_DMY_WITH_HYPHENS(new Date(data.eng_date));
+    basicInfo.birth_time = userInput.time;
+    basicInfo.time_type = userInput.time_type;
+    basicInfo.gender = userInput.gender;
+    basicInfo.eng_date = data.eng_date;
+    basicInfo.sunrise = data.sunrise;
+    basicInfo.year_id = data.year_id;
+    basicInfo.year_name = getYear(data.year_id).EName;
+    basicInfo.month_id = data.month_id;
+    basicInfo.month_name = getMonth(data.month_id).EName;
+    basicInfo.tamil_date = data.tamil_date;
+    basicInfo.day = data.day;
+    basicInfo.ayanam = data.ayanam;
+    basicInfo.patcham = data.patcham;
+    // Create Deep Info
+    deepInfo.agas_val = data.agas_val;
+    deepInfo.tamil_date = data.tamil_date;
+    deepInfo.day = data.day;
+    deepInfo.natchathiram1_id = data.natchathiram1_id;
+    deepInfo.natchathiram1_val = data.namayogam1_val;
+    deepInfo.natchathiram2_id = data.natchathiram2_id;
+    deepInfo.natchathiram2_val = data.natchathiram2_val;
+    deepInfo.lagunam_id = data.lagunam_id;
+    deepInfo.lagunam_val = data.lagunam_val;
+    // deepInfo.ayanam = data.ayanam;
+    // deepInfo.patcham = data.patcham;
+    deepInfo.thithi1 = data.thithi1;
+    deepInfo.thithi1_val = data.thithi1_val;
+    deepInfo.thithi2 = data.thithi2;
+    deepInfo.thithi2_val = data.thithi2_val;
+    deepInfo.namayogam1 = data.namayogam1;
+    deepInfo.namayogam1_val = data.namayogam1_val;
+    deepInfo.namayogam2 = data.namayogam2;
+    deepInfo.namayogam2_val = data.namayogam2_val;
+    deepInfo.karnam = data.karnam;
+    deepInfo.karnam_val = data.karnam_val;
+    deepInfo.thiyachiyam_val = data.thiyachiyam_val;
+    deepInfo.eng_date = data.eng_date;
+    // console.log(deepInfo);
+    return { basicInfo, deepInfo }
+}
+export function getPathaSaramForLagunam(rasiId: number, amsamId: number) {
+    const rasi_amsam_array: any = getRasiAmsamPositionId(0, 0, true);
+    return rasi_amsam_array.filter((x: any) => x.rasi_id === rasiId && x.amsam_id === amsamId)[0];
+    // console.log(rasi_amsam_Info);
 }

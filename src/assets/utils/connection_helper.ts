@@ -2,7 +2,7 @@ import { Dayinfo, mysqlRes } from "../interface/common.interface";
 const connection = require("../../connection/connection");
 
 export function connectionHelper(query: string) {
-    return new Promise<[]>((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
         connection.query(query, (err: any, result: any) => {
             if (!err) {
                 resolve(JSON.parse(JSON.stringify(result)));

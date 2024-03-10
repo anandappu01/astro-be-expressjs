@@ -1,11 +1,16 @@
-import { getRecordByDateModel } from "../../model/common.model";
+import { getBasicInfoByDateModel, getRecordByDateModel } from "../../model/common.model";
 import { add_times } from "./time_helper";
 
-export function getPanjangamInfoByDate(date: any) {
-    return getRecordByDateModel(date);
+export function getPanjangamInfoByDate(date: any, type?: string) {
+    if (type === 'allInfo') {
+        return getRecordByDateModel(date);
+    } else {
+        return getBasicInfoByDateModel(date);
+    }
 }
 
-export function getNaligaiByHours(hours: string) {
+export function getNaligaiByHours(hours: string | number) {
+    hours = hours.toString();
     const temp1: any = hours.split('.');
     const temp2 = (temp1[0] * 2.5);
     const temp3 = temp2.toString().split('.');

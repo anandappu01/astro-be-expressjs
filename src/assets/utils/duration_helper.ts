@@ -1,6 +1,7 @@
-export function getDuration(naligai: number = 0) {
+export function getDuration(naligai: string | number = 0) {
     // Morning, afternoon, etc are 'times of (the) day'
     if (naligai) {
+        naligai = Number(naligai);
         if (naligai <= 10.00) {
             return 'காலை';  // Kalai
         } else if (naligai <= 25.00) {

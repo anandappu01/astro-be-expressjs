@@ -1,19 +1,20 @@
-export function add_times(val1: string, val2: string) {
+export function add_times(val1: string | number, val2: string | number) {
     const val1_sec = convert_seconds(val1);
     const val2_sec = convert_seconds(val2);
     const val = val1_sec + val2_sec;
     return convert_hours(val);
 }
 
-export function subtract_times(val1: string, val2: string) {
+export function subtract_times(val1: string | number, val2: string | number) {
     const val1_sec = convert_seconds(val1);
     const val2_sec = convert_seconds(val2);
     const val = val1_sec - val2_sec;
     return convert_hours(val);
 }
 
-export function convert_seconds(naligai: string) {
+export function convert_seconds(naligai: string | number) {
     // console.log(naligai);
+    naligai = naligai.toString();
     const type1 = naligai.includes(".");
     const type2 = naligai.includes(":");
 
@@ -27,7 +28,10 @@ export function convert_seconds(naligai: string) {
         const type2Array = naligai.split(":");
         val1 = type2Array[0];
         val2 = type2Array[1];
-    }
+    } else {
+        console.warn('Invalid input - convertSeconds');
+        return 0;
+     }
 
     const sec1 = (val1 * 3600);
     const sec2 = (val2 * 60);

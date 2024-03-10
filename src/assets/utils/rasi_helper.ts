@@ -1,5 +1,6 @@
-export function getRasi(val: number = 0) {
+export function getRasi(val: string | number = 0) {
    if (val) {
+      val = Number(val);
       switch (val) {
          case 1:
             return "மேஷம்";
